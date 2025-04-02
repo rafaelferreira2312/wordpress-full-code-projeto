@@ -1,0 +1,245 @@
+version: '3.8'
+
+services:
+# Versão do php 8.2
+  php_82:
+    build:
+      context: ./php/8.2
+      dockerfile: Dockerfile
+    container_name: php_82
+    volumes:
+      - ./wordpress:/var/www/html
+    restart: always
+
+  # Versão do php 8.1
+  php_81:
+    build:
+      context: ./php/8.1
+      dockerfile: Dockerfile
+    container_name: php_81
+    volumes:
+      - ./wordpress:/var/www/html
+    restart: always
+    
+  # Versão do php 8.0
+  php_80:
+    build:
+      context: ./php/8.0
+      dockerfile: Dockerfile
+    container_name: php_80
+    volumes:
+      - ./wordpress:/var/www/html
+    restart: always
+  
+  # Versão do php 7.4
+  php_74:
+    build:
+      context: ./php/7.4
+      dockerfile: Dockerfile
+    container_name: php_74
+    volumes:
+      - ./wordpress:/var/www/html
+    restart: always
+
+  # Versão do php 7.0
+  php_70:
+    build:
+      context: ./php/7.0
+      dockerfile: Dockerfile
+    container_name: php_70
+    volumes:
+      - ./wordpress:/var/www/html
+    restart: always
+
+  # WordPress v6.5.3 com PHP 8.2
+  wordpress_653:
+    image: wordpress:6.5.3-php8.2-fpm
+    container_name: wordpress_653
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: user
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: wordpress_653
+    volumes:
+      - ./wordpress/v6.5.3:/var/www/html
+    restart: always
+
+  # WordPress v5.9.3 com PHP 7.4
+  wordpress_593:
+    image: wordpress:5.9.3-php7.4-fpm
+    container_name: wordpress_593
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: user
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: wordpress_593
+    volumes:
+      - ./wordpress/v5.9.3:/var/www/html
+    restart: always
+
+  # WordPress v4.9.8 com PHP 5.6
+  wordpress_498:
+    image: wordpress:4.9.8-php5.6-fpm
+    container_name: wordpress_498
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: user
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: wordpress_498
+    volumes:
+      - ./wordpress/v4.9.8:/var/www/html
+    restart: always
+
+  # Banco de Dados MySQL/MariaDB
+  db:
+    image: mariadb:latest
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./database/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/mariadb/my.cnf:/etc/mysql/my.cnf
+      - db_data:/var/lib/mysql
+    restart: always
+
+  # Banco de Dados PostgreSQL
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: wordpress_db
+    volumes:
+      - ./database/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/postgres/pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+      - pg_data:/var/lib/postgresql/data
+    restart: always
+
+  # Banco de Dados Oracle
+  oracle:
+    image: gvenzl/oracle-xe:latest
+    container_name: oracle
+    environment:
+      ORACLE_PASSWORD: password
+    volumes:
+      - ./database/oracle/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/oracle/tnsnames.ora:/opt/oracle/network/admin/tnsnames.ora
+      - oracle_data:/opt/oracle/oradata
+    restart: always
+
+  # Banco de Dados Mysql 
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: wordpress_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - ./database/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/mysql/my.cnf:/etc/mysql/my.cnf
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: always
+
+  # Banco de Dados Sqlite
+  sqlite:
+    image: nouchka/sqlite3
+    container_name: sqlite
+    volumes:
+      - ./database/sqlite:/database
+    command: sqlite3 /database/database.sqlite
+    restart: always
+
+  # Servidor Web Nginx
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    depends_on:
+      - wordpress_653
+      - wordpress_593
+      - wordpress_498
+    volumes:
+      - ./servers/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./wordpress:/var/www/html
+    ports:
+      - "8080:80"  # WordPress v6.5.3
+      - "8081:80"  # WordPress v5.9.3
+      - "8082:80"  # WordPress v4.9.8
+    restart: always
+
+  # Servidor Web Apache (como opção alternativa ao Nginx)
+  apache:
+    image: httpd:latest
+    container_name: apache
+    depends_on:
+      - wordpress_653
+      - wordpress_593
+      - wordpress_498
+    volumes:
+      - ./servers/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ./wordpress:/var/www/html
+    ports:
+      - "8090:80"  # WordPress v6.5.3
+      - "8091:80"  # WordPress v5.9.3
+      - "8092:80"  # WordPress v4.9.8
+    restart: always
+
+  # phpMyAdmin para gerenciar MySQL/MariaDB
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: user
+      PMA_PASSWORD: password
+    ports:
+      - "8083:80"
+    restart: always
+
+  # pgAdmin para gerenciar PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    ports:
+      - "8084:80"
+    restart: always
+
+  # Bitbucket para versionamento de código
+  bitbucket:
+    image: atlassian/bitbucket
+    container_name: bitbucket
+    environment:
+      BITBUCKET_HOME: /var/atlassian/application-data/bitbucket
+    volumes:
+      - bitbucket_data:/var/atlassian/application-data/bitbucket
+    ports:
+      - "7990:7990"
+      - "7999:7999"
+    restart: always
+
+volumes:
+  db_data:
+  pg_data:
+  oracle_data:
+  bitbucket_data:
+  mysql_data:

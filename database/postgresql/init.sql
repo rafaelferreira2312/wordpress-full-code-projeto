@@ -1,0 +1,3 @@
+CREATE DATABASE wordpress_db;
+CREATE ROLE user WITH LOGIN PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE wordpress_db TO user;
